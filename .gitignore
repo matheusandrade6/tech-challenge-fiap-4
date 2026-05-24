@@ -94,6 +94,8 @@ data/external/
 *.sqlite
 *.db
 *.sql
+VIDEO_GUIDE.md
+ARCHITECTURE_DIAGRAM.md
 
 # ─── ML / Data Science artifacts ──────────────────────────────────────────────
 *.pkl
@@ -185,5 +187,15 @@ docs/_build/
 site/
 .sphinx/
 
-# NOTE: model/ artifacts are intentionally TRACKED so Render can deploy without
-# a paid persistent disk. Remove this comment if you switch to S3/GCS.
+# ─── Model artifacts (re-included for Render deployment) ─────────────────────
+# The wildcard rules above would exclude these; the negations below restore them
+# so the trained LSTM artifacts ship with the repo and Render can serve them
+# without a paid persistent disk.  Remove this block if you switch to S3/GCS.
+!models/
+!models/metadata.json
+!models/saved_models/
+!models/saved_models/*.keras
+!models/scalers/
+!models/scalers/*.pkl
+!models/checkpoints/
+!models/checkpoints/*.keras
