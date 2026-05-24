@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+.env
+*.log
+logs/
+notebooks/
+data/raw/
+data/processed/
+venv/
+.venv/
+*.ipynb
+.python-version
+reports/

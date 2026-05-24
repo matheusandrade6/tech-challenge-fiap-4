@@ -1,0 +1,189 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyw
+.python-version
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+MANIFEST
+
+# ─── Virtual environments ─────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+.env/
+virtualenv/
+.virtualenv/
+pipenv/
+.pipenv/
+
+# ─── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# ─── Package managers ─────────────────────────────────────────────────────────
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock
+Pipfile.lock
+.pdm.toml
+__pypackages__/
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+.tox/
+.nox/
+.cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.hypothesis/
+nosetests.xml
+test-results/
+junit*.xml
+
+# ─── Type checking ────────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# ─── Linting & formatting ─────────────────────────────────────────────────────
+.ruff_cache/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+
+# ─── Data ─────────────────────────────────────────────────────────────────────
+data/raw/
+data/processed/
+data/interim/
+data/external/
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.arrow
+*.hdf5
+*.h5
+*.sqlite
+*.db
+*.sql
+
+# ─── ML / Data Science artifacts ──────────────────────────────────────────────
+*.pkl
+*.pickle
+*.joblib
+*.npy
+*.npz
+*.pt
+*.pth
+*.onnx
+*.pb
+*.tflite
+*.h5
+*.keras
+mlruns/
+mlflow_artifacts/
+wandb/
+.neptune/
+outputs/
+runs/
+checkpoints/
+saved_models/
+model_registry/
+
+# ─── Jupyter ──────────────────────────────────────────────────────────────────
+*.ipynb
+.ipynb_checkpoints/
+*.nbconvert/
+profile_default/
+ipython_config.py
+
+# ─── Reports & visualisation ──────────────────────────────────────────────────
+reports/
+figures/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+*.eps
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+.docker/
+docker-compose.override.yml
+
+# ─── OS artefacts ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ─── IDE & editors ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ─── Temporary files ──────────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ─── Compiled / binary ────────────────────────────────────────────────────────
+*.so
+*.dylib
+*.dll
+*.exe
+*.class
+*.o
+*.a
+
+# ─── Docs build ───────────────────────────────────────────────────────────────
+docs/_build/
+site/
+.sphinx/
+
+# NOTE: model/ artifacts are intentionally TRACKED so Render can deploy without
+# a paid persistent disk. Remove this comment if you switch to S3/GCS.

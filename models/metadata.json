@@ -1,0 +1,13 @@
+{
+  "model_version": "v1.0",
+  "training_date": "2026-05-23T22:04:11.622468",
+  "sequence_length": 60,
+  "feature_columns": [
+    "Close"
+  ],
+  "test_metrics": {
+    "mae": 3.89628267288208,
+    "rmse": 4.126856327056885,
+    "mape": 13.172173500061035
+  }
+}
