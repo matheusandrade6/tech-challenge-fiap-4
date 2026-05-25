@@ -12,6 +12,18 @@ from src.preprocessing.scaler import ClosingPriceScaler
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL_PATH = Path("models/saved_models/lstm_model.keras")
+
+
+class _CompatDense(tf.keras.layers.Dense):
+    """Dense subclass that silently drops ``quantization_config`` serialised by
+    newer Keras versions so models saved on a higher Keras can be loaded on a
+    lower one without errors."""
+
+    def __init__(self, *args, quantization_config=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+_COMPAT_OBJECTS = {"Dense": _CompatDense}
 _DEFAULT_SCALER_PATH = Path("models/scalers/scaler.pkl")
 _DEFAULT_METADATA_PATH = Path("models/metadata.json")
 
@@ -95,7 +107,9 @@ class ModelPersistence:
         """Load model, scaler, and metadata from disk and return as ModelArtifacts."""
         if not self.model_path.exists():
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
-        model = tf.keras.models.load_model(str(self.model_path))
+        model = tf.keras.models.load_model(
+            str(self.model_path), custom_objects=_COMPAT_OBJECTS
+        )
         logger.info("Model loaded from %s", self.model_path)
 
         if not self.scaler_path.exists():
