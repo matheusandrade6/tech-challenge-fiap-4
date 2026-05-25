@@ -3,7 +3,7 @@ services:
     name: lstm-stock-api
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-render.txt
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
@@ -13,3 +13,7 @@ services:
         value: INFO
       - key: CORS_ORIGINS
         value: "*"
+      - key: CUDA_VISIBLE_DEVICES
+        value: "-1"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "3"
