@@ -17,13 +17,33 @@ _DEFAULT_MODEL_PATH = Path("models/saved_models/lstm_model.keras")
 class _CompatDense(tf.keras.layers.Dense):
     """Dense subclass that silently drops ``quantization_config`` serialised by
     newer Keras versions so models saved on a higher Keras can be loaded on a
-    lower one without errors."""
+    lower one without errors.
+
+    Keras 3.x deserialises layers by calling ``cls.from_config(config)`` which,
+    in the parent ``Dense`` implementation, may instantiate ``Dense`` directly
+    (bypassing our ``__init__`` override).  Overriding ``from_config`` is the
+    only reliable interception point: we strip the unknown key before handing
+    control back to the parent, then call ``cls(**config)`` so *this* class's
+    ``__init__`` is used rather than ``Dense.__init__``.
+    """
+
+    @classmethod
+    def from_config(cls, config):
+        config = dict(config)  # never mutate the original
+        config.pop("quantization_config", None)
+        return cls(**config)
 
     def __init__(self, *args, quantization_config=None, **kwargs):
+        # Belt-and-suspenders: absorb the kwarg if Keras ever calls __init__
+        # directly (e.g. older TF serialisation paths).
         super().__init__(*args, **kwargs)
 
 
-_COMPAT_OBJECTS = {"Dense": _CompatDense}
+_COMPAT_OBJECTS = {
+    "Dense": _CompatDense,
+    # Keras 3.x sometimes resolves by full module path; cover both forms.
+    "keras.layers.Dense": _CompatDense,
+}
 _DEFAULT_SCALER_PATH = Path("models/scalers/scaler.pkl")
 _DEFAULT_METADATA_PATH = Path("models/metadata.json")
 
@@ -107,9 +127,13 @@ class ModelPersistence:
         """Load model, scaler, and metadata from disk and return as ModelArtifacts."""
         if not self.model_path.exists():
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
-        model = tf.keras.models.load_model(
-            str(self.model_path), custom_objects=_COMPAT_OBJECTS
-        )
+        # Use custom_object_scope (more reliable in Keras 3.x than the
+        # custom_objects= kwarg alone) so _CompatDense intercepts Dense
+        # deserialisation and silently drops the unknown quantization_config key.
+        with tf.keras.utils.custom_object_scope(_COMPAT_OBJECTS):
+            model = tf.keras.models.load_model(
+                str(self.model_path), custom_objects=_COMPAT_OBJECTS
+            )
         logger.info("Model loaded from %s", self.model_path)
 
         if not self.scaler_path.exists():
