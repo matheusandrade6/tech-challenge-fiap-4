@@ -2,7 +2,7 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -11,8 +11,6 @@ import numpy as np
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
-
-from src.model.persistence import ModelArtifacts, ModelInference, ModelPersistence  # noqa: E402
 
 from api.config import settings  # noqa: E402
 
@@ -23,10 +21,19 @@ class InferenceEngine:
     """Manages LSTM artifact lifecycle and price prediction."""
 
     def __init__(self) -> None:
-        self._artifacts: ModelArtifacts | None = None
-        self._inference = ModelInference()
+        self._artifacts = None  # type: Optional[object]
+        self._inference = None  # type: Optional[object]
 
     def load(self) -> None:
+        # NOTE: TensorFlow is imported lazily here (inside load()) rather than at
+        # module level.  A top-level TF import takes ~30 s on cold start, which
+        # delays uvicorn's port binding long enough for Render to report
+        # "No open ports detected" and fail the deploy.  By deferring the import
+        # to this method — which runs inside the FastAPI lifespan, *after* the
+        # socket is already bound — the app starts accepting connections immediately
+        # while the model is loading in the background startup hook.
+        from src.model.persistence import ModelInference, ModelPersistence  # noqa: E402
+
         logger.info(
             "Loading model artifacts — model=%s  scaler=%s  metadata=%s",
             settings.MODEL_PATH,
@@ -34,6 +41,7 @@ class InferenceEngine:
             settings.METADATA_PATH,
         )
         t0 = time.perf_counter()
+        self._inference = ModelInference()
         persistence = ModelPersistence(
             model_path=settings.MODEL_PATH,
             scaler_path=settings.SCALER_PATH,
@@ -77,7 +85,7 @@ class InferenceEngine:
             raise ValueError("All prices must be positive numbers (> 0)")
 
         t0 = time.perf_counter()
-        predicted = self._inference.predict_next_price(
+        predicted = self._inference.predict_next_price(  # type: ignore[union-attr]
             last_60_days=prices_arr,
             model=self._artifacts.model,  # type: ignore[union-attr]
             scaler=self._artifacts.scaler,  # type: ignore[union-attr]
