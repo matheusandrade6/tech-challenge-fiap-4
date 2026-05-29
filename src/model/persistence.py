@@ -14,36 +14,46 @@ logger = logging.getLogger(__name__)
 _DEFAULT_MODEL_PATH = Path("models/saved_models/lstm_model.keras")
 
 
-class _CompatDense(tf.keras.layers.Dense):
-    """Dense subclass that silently drops ``quantization_config`` serialised by
-    newer Keras versions so models saved on a higher Keras can be loaded on a
-    lower one without errors.
+def _patch_dense_from_config() -> None:
+    """Monkey-patch ``Dense.from_config`` to silently drop unknown kwargs.
 
-    Keras 3.x deserialises layers by calling ``cls.from_config(config)`` which,
-    in the parent ``Dense`` implementation, may instantiate ``Dense`` directly
-    (bypassing our ``__init__`` override).  Overriding ``from_config`` is the
-    only reliable interception point: we strip the unknown key before handing
-    control back to the parent, then call ``cls(**config)`` so *this* class's
-    ``__init__`` is used rather than ``Dense.__init__``.
+    Why this is needed
+    ------------------
+    Models saved with Keras >= 3.6 store ``quantization_config`` in the Dense
+    layer config.  Keras < 3.6 (shipped with TF 2.18.0) raises::
+
+        Unrecognized keyword arguments passed to Dense: {'quantization_config': None}
+
+    The ``custom_objects`` / ``custom_object_scope`` APIs cannot fix this
+    because Keras 3.x resolves **built-in** layer classes (like Dense) from its
+    own internal registry *before* consulting ``custom_objects``, so a
+    ``_CompatDense`` subclass is never reached for built-in names.
+
+    Directly patching ``Dense.from_config`` on the class object is the only
+    interception point that is guaranteed to run regardless of how Keras resolves
+    the class internally.  The patch strips any key the current Dense.__init__
+    does not accept (detected via inspect) before delegating to the original
+    implementation, making it forward-compatible with future unknown keys too.
     """
+    import inspect
 
-    @classmethod
-    def from_config(cls, config):
-        config = dict(config)  # never mutate the original
-        config.pop("quantization_config", None)
-        return cls(**config)
+    original_func = tf.keras.layers.Dense.from_config.__func__  # underlying function
+    dense_params = set(inspect.signature(tf.keras.layers.Dense.__init__).parameters)
 
-    def __init__(self, *args, quantization_config=None, **kwargs):
-        # Belt-and-suspenders: absorb the kwarg if Keras ever calls __init__
-        # directly (e.g. older TF serialisation paths).
-        super().__init__(*args, **kwargs)
+    @classmethod  # type: ignore[misc]
+    def _compat_from_config(cls, config):  # type: ignore[misc]
+        config = dict(config)
+        # Remove every key that the installed Dense.__init__ does not understand.
+        for key in list(config):
+            if key not in dense_params and key not in ("name", "dtype", "trainable"):
+                config.pop(key)
+        return original_func(cls, config)
+
+    tf.keras.layers.Dense.from_config = _compat_from_config  # type: ignore[method-assign]
 
 
-_COMPAT_OBJECTS = {
-    "Dense": _CompatDense,
-    # Keras 3.x sometimes resolves by full module path; cover both forms.
-    "keras.layers.Dense": _CompatDense,
-}
+_patch_dense_from_config()
+
 _DEFAULT_SCALER_PATH = Path("models/scalers/scaler.pkl")
 _DEFAULT_METADATA_PATH = Path("models/metadata.json")
 
@@ -127,13 +137,10 @@ class ModelPersistence:
         """Load model, scaler, and metadata from disk and return as ModelArtifacts."""
         if not self.model_path.exists():
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
-        # Use custom_object_scope (more reliable in Keras 3.x than the
-        # custom_objects= kwarg alone) so _CompatDense intercepts Dense
-        # deserialisation and silently drops the unknown quantization_config key.
-        with tf.keras.utils.custom_object_scope(_COMPAT_OBJECTS):
-            model = tf.keras.models.load_model(
-                str(self.model_path), custom_objects=_COMPAT_OBJECTS
-            )
+        # Dense.from_config is patched at module level (_patch_dense_from_config)
+        # to silently drop keys like quantization_config that newer Keras versions
+        # add but older ones don't recognise.  No custom_objects needed here.
+        model = tf.keras.models.load_model(str(self.model_path))
         logger.info("Model loaded from %s", self.model_path)
 
         if not self.scaler_path.exists():
